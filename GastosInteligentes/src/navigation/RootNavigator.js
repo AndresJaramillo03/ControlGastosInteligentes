@@ -2,8 +2,8 @@ import React, {useEffect, useState} from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { onAuthStateChanged } from "firebase/auth";
 
-import AuthStack from "./AuthStack";
-import AppStack from "./AppStack";
+import AppNavigator from "./AppNavigator";
+import AuthNavigator from "./AuthNavigator";
 import { auth } from "../config/firebase";
 
 const RootNavigator = () => {
@@ -25,7 +25,7 @@ const RootNavigator = () => {
 
     return(
         <NavigationContainer>
-            {user ? <AppStack/> : <AuthStack/>}
+            {user ? <AppNavigator/> : <AuthNavigator/>}
         </NavigationContainer>
     )
 }

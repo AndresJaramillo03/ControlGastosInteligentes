@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import {getFirestore} from 'firebase/firestore';
+import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: Constants.expoConfig.extra.apiKey,
@@ -15,10 +15,6 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-/*const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});*/
-
 let auth;
 try {
   auth = initializeAuth(app, {
@@ -28,6 +24,10 @@ try {
   auth = getAuth(app);
 }
 
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+});
+
 
 export { auth, db };
