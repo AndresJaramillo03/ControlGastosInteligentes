@@ -73,7 +73,7 @@ const TransactionFormScreen = ({ route, navigation }) => {
         }}
       />
 
-      {/* Descripción */}
+      {/* Descripcion */}
       <Text style={{ fontWeight: "bold" }}>Descripción</Text>
       <TextInput
         placeholder={descriptionPlaceholder}
