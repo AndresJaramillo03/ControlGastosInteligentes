@@ -1,16 +1,15 @@
 import React from 'react';
 import { View, Text, Button } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
-import { signOut } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import {useAuth} from '../../context/AuthContext'
 
 const SettingsScreen = () => {
 
-  const user = auth.currentUser
+ const {user, logout} = useAuth();
 
   const handleLogout = async () => {
       try {
-        await signOut(auth);
+        await logout();
         console.log("Sesion cerrada")
       } catch (error){
         console.error("Error al cerrar sesión:", error.message)

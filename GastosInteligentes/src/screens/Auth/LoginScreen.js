@@ -1,8 +1,9 @@
 import React, {useState} from 'react'
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native'
-import { loginUser } from '../../services/authService'
+import { useAuth } from '../../context/AuthContext'
 
 const  LoginScreen = ({navigation}) => {
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ const  LoginScreen = ({navigation}) => {
         }
         setLoading(true);
         try{
-            const user = await loginUser(email, password);
+            const user = await login(email, password);
             console.log('Usuario logeado:', user.email);
         } catch(error) {
             Alert.alert('Error', error.message);

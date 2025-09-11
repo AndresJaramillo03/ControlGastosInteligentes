@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
-import { registerUser } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 
 const RegisterScreen = ({ navigation }) => {
+  const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ const RegisterScreen = ({ navigation }) => {
     }
     setLoading(true);
     try {
-      const user = await registerUser(email, password);
+      const user = await register(email, password);
       console.log('Usuario registrado:', user.email);
       Alert.alert('Éxito', 'Usuario registrado correctamente');
     } catch (error) {
