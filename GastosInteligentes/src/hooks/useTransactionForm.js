@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Alert } from "react-native";
-import { auth } from "../config/firebase";
+import { useAuth } from "../context/AuthContext";
 import { addTransaction, updateTransaction } from "../services/transactionService";
 
 const paymentMethods = ["efectivo", "tarjeta", "transferencia"];
@@ -19,6 +19,7 @@ const CATEGORIES = {
 export const useTransactionForm = (item, navigation) => {
   const editing = Boolean(item);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const [type, setType] = useState(item?.type ?? "expense");
   const [amount, setAmount] = useState(String(item?.amount ?? ""));
@@ -52,7 +53,7 @@ export const useTransactionForm = (item, navigation) => {
       return Alert.alert("Datos incompletos", "Selecciona una fecha válida.");
     }
 
-    const uid = auth.currentUser?.uid;
+    
     const payload = {
       type,
       category,
@@ -67,7 +68,7 @@ export const useTransactionForm = (item, navigation) => {
       if (editing) {
         await updateTransaction(item.id, payload);
       } else {
-        await addTransaction(uid, payload);
+        await addTransaction(user?.uid, payload);
       }
       navigation.goBack();
     } catch (error) {

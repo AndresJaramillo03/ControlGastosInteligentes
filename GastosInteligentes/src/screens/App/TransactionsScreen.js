@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, ActivityIndicator, Button, Pressable } from "react-native";
-import { auth } from "../../config/firebase";
+import {useAuth} from '../../context/AuthContext'
 import { getTransactionByUser, deleteTransaction } from "../../services/transactionService";
 import { Alert } from "react-native";
 
 const TransactionsScreen = ({ navigation }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const {user} = useAuth();
 
   const loadTransactions = async () => {
     try {
       setLoading(true);
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
-      const data = await getTransactionByUser(uid);
+      if (!user?.uid) return;
+      const data = await getTransactionByUser(user.uid);
       setTransactions(data);
     } catch (error) {
       console.error("Error cargando transacciones:", error);
