@@ -23,7 +23,7 @@ const AppTab = () => (
           iconName = focused ? "home" : "home-outline";
         } else if (route.name === "Transactions") {
           iconName = focused ? "list" : "list-outline";
-        } else if (route.name === "Stats") {
+        } else if (route.name === "Reports") {
           iconName = focused ? "bar-chart" : "bar-chart-outline";
         } else if (route.name === "Settings") {
           iconName = focused ? "settings" : "settings-outline";
@@ -40,8 +40,8 @@ const AppTab = () => (
       component={TransactionsScreen}
       options={{ title: "Transacciones" }}
     />
+    <Tab.Screen name="Reports" component={ReportsScreen} options={{title: "Reportes"}}/>
     <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: "Ajustes" }} />
-    <Tab.Screen name="Reports" component={ReportsScreen} options={{tabBarIcon: ({color, size}) => (<Ionicons name="stats-chart" size={size} color={color}/>) }}/>
   </Tab.Navigator>
 );
 
