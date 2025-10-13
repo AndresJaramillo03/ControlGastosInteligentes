@@ -7,6 +7,7 @@ import HomeScreen from "../screens/App/HomeScreen";
 import TransactionsScreen from "../screens/App/TransactionsScreen";
 import TransactionFormScreen from "../screens/App/TransactionFormScreen";
 import SettingsScreen from "../screens/App/SettingsScreen";
+import ReportsScreen from "../screens/App/ReportsScreen";
 
 
 const Tab = createBottomTabNavigator();
@@ -40,6 +41,7 @@ const AppTab = () => (
       options={{ title: "Transacciones" }}
     />
     <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: "Ajustes" }} />
+    <Tab.Screen name="Reports" component={ReportsScreen} options={{tabBarIcon: ({color, size}) => (<Ionicons name="stats-chart" size={size} color={color}/>) }}/>
   </Tab.Navigator>
 );
 
