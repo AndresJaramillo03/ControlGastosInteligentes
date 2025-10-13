@@ -40,7 +40,7 @@ export default function ReportsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#000" />
         <Text style={styles.muted}>Cargando reportes...</Text>
       </View>
     );
