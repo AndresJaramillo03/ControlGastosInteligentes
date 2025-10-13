@@ -1,107 +1,36 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ActivityIndicator, StyleSheet, Dimensions, ScrollView, Button } from "react-native";
-import { useAuth } from "../../context/AuthContext";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../config/firebase";
-import { PieChart } from "react-native-chart-kit";
+// screens/ReportsScreen.js
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  Button,
+  Dimensions,
+} from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { PieChart } from "react-native-chart-kit";
+import { useTransactions } from "../../hooks/useTransactions";
+import { useMonthlyReport } from "../../hooks/useMonthlyReport";
 
 const screenWidth = Dimensions.get("window").width;
 
-const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-const endOfMonth   = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-
-const toNumber = (val) => {
-  if (typeof val === "number") return val;
-  if (typeof val === "string") {
-    const cleaned = val.replace(/\./g, "").replace(",", ".");
-    const n = Number(cleaned);
-    return isNaN(n) ? 0 : n;
-  }
-  return 0;
-};
-
-const getTxDate = (tx) => {
-  const raw = tx?.transactionDate ?? tx?.date ?? tx?.createdAt ?? null;
-  if (!raw) return null;
-  try {
-    if (typeof raw?.toDate === "function") return raw.toDate();
-    const d = new Date(raw);
-    return isNaN(d.getTime()) ? null : d;
-  } catch {
-    return null;
-  }
+const chartConfig = {
+  backgroundGradientFrom: "#fff",
+  backgroundGradientTo: "#fff",
+  decimalPlaces: 0,
+  color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+  labelColor: (opacity = 1) => `rgba(0,0,0,${opacity})`,
 };
 
 export default function ReportsScreen() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const { filtered, loading, loadTransactions } = useTransactions();
+  const { selectedMonth, setSelectedMonth, totals, pieData } = useMonthlyReport(filtered);
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.uid) return;
-      setLoading(true);
-      try {
-        const qRef = query(collection(db, "transactions"), where("userId", "==", user.uid));
-        const snap = await getDocs(qRef);
-        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-        const from = startOfMonth(selectedMonth);
-        const to = endOfMonth(selectedMonth);
-
-        const filtered = all.filter((tx) => {
-          const d = getTxDate(tx);
-          return d && d >= from && d <= to;
-        });
-
-        setRows(filtered);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [user?.uid, selectedMonth]);
-
-  const totals = useMemo(() => {
-    const income = rows.filter((r) => r.type === "income").reduce((a, b) => a + toNumber(b.amount), 0);
-    const expense = rows.filter((r) => r.type === "expense").reduce((a, b) => a + toNumber(b.amount), 0);
-    return { income, expense, balance: income - expense };
-  }, [rows]);
-
-const pieData = useMemo(() => {
-  const data = [
-    {
-      name: "Ingresos",
-      value: totals.income,
-      color: "#4CAF50",
-      legendFontColor: "#333",
-      legendFontSize: 13,
-    },
-    {
-      name: "Gastos",
-      value: totals.expense,
-      color: "#E53935",
-      legendFontColor: "#333",
-      legendFontSize: 13,
-    },
-  ].filter((d) => d.value > 0);
-
-  return data.map((d) => ({
-    ...d,
-    population: d.value,
-  }));
-}, [totals]);
-
-  const chartConfig = {
-    backgroundGradientFrom: "#fff",
-    backgroundGradientTo: "#fff",
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-  };
+    loadTransactions();
+  }, []);
 
   const handleChangeMonth = (_e, date) => {
     setShowPicker(false);
@@ -111,18 +40,24 @@ const pieData = useMemo(() => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator size="large" />
         <Text style={styles.muted}>Cargando reportes...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 24 }}>
+    <View style={styles.container}>
       <Text style={styles.title}>Reportes del mes</Text>
+
       <Button title="Cambiar mes" onPress={() => setShowPicker(true)} />
       {showPicker && (
-        <DateTimePicker value={selectedMonth} mode="date" display="calendar" onChange={handleChangeMonth} />
+        <DateTimePicker
+          value={selectedMonth}
+          mode="date"
+          display="calendar"
+          onChange={handleChangeMonth}
+        />
       )}
 
       <View style={styles.cards}>
@@ -142,7 +77,10 @@ const pieData = useMemo(() => {
         </View>
       </View>
 
-      <Text style={styles.section}>Ingresos vs Gastos ({selectedMonth.toLocaleString("default", { month: "long", year: "numeric" })})</Text>
+      <Text style={styles.section}>
+        Ingresos vs Gastos ({selectedMonth.toLocaleString("default", { month: "long", year: "numeric" })})
+      </Text>
+
       {pieData.length === 0 ? (
         <Text style={styles.muted}>No hay datos para este mes.</Text>
       ) : (
@@ -157,17 +95,17 @@ const pieData = useMemo(() => {
           absolute
         />
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 8 },
+  container: { flex: 1, padding: 16 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 20, fontWeight: "600", marginBottom: 8 },
-  section: { marginTop: 16, marginBottom: 8, fontSize: 16, fontWeight: "600" },
-  muted: { color: "#666" },
-  cards: { flexDirection: "row", gap: 8, marginVertical: 10 },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, textAlign: "center" },
+  section: { marginTop: 24, marginBottom: 12, fontSize: 18, fontWeight: "600", textAlign: "center" },
+  muted: { color: "#666", textAlign: "center", marginTop: 16 },
+  cards: { flexDirection: "row", gap: 8, marginVertical: 16 },
   card: { flex: 1, backgroundColor: "#f2f2f2", padding: 12, borderRadius: 12 },
   cardTitle: { color: "#555", marginBottom: 4 },
   amount: { fontSize: 18, fontWeight: "700" },
