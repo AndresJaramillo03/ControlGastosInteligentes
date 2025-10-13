@@ -8,7 +8,6 @@ export const addTransaction = async(userId, transaction) => {
         const docRef = await addDoc(collection(db, "transactions"), {
             ...transaction,
             userId,
-            createdAt: serverTimestamp(),
         });
         return docRef.id;
     } catch (error) {
@@ -22,7 +21,7 @@ export const getTransactionByUser = async (userId) => {
         const q = query(
             collection(db, "transactions"),
             where("userId", "==", userId),
-            orderBy("createdAt", "desc")
+            orderBy("transactionDate", "desc")
         );
 
         const querySnapshot = await getDocs(q);
