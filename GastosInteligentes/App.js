@@ -12,7 +12,7 @@ function SyncHandler() {
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (state.isConnected && user?.uid) {
-        console.log("🌐 Conexión detectada, sincronizando...");
+        console.log("Conexión detectada, sincronizando...");
         syncOfflineTransactions(user.uid);
       }
     });
