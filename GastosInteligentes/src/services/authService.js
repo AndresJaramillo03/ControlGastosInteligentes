@@ -1,15 +1,73 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import NetInfo from "@react-native-community/netinfo";
+import { auth } from "../config/firebase";
+import { getDB } from "./database";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 
-console.log('authService.js cargado');
-
+/**
+ * Registrar usuario (funciona online y offline)
+ */
 export const registerUser = async (email, password) => {
-  console.log('Registrando usuario:', email);
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  return userCredential.user;
+  const netInfo = await NetInfo.fetch();
+  const db = await getDB();
+
+  if (netInfo.isConnected) {
+    // ONLINE → Firebase + guardar local
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const { uid } = userCredential.user;
+
+    await db.runAsync(
+      `INSERT OR REPLACE INTO users (uid, email, password, synced)
+       VALUES (?, ?, ?, 1);`,
+      [uid, email, password]
+    );
+
+    console.log("✅ Usuario creado online y guardado localmente");
+    return { uid, email, online: true };
+  } else {
+    // OFFLINE → Guardar localmente
+    await db.runAsync(
+      `INSERT INTO users (uid, email, password, synced)
+       VALUES (?, ?, ?, 0);`,
+      [null, email, password]
+    );
+
+    console.log("✅ Usuario registrado offline (pendiente de sincronizar)");
+    return { email, uid: null, online: false };
+  }
 };
 
+/**
+ * Login usuario (funciona online y offline)
+ */
 export const loginUser = async (email, password) => {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  return userCredential.user;
+  const netInfo = await NetInfo.fetch();
+  const db = await getDB();
+
+  if (netInfo.isConnected) {
+    // ONLINE → Firebase Auth
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const { uid } = userCredential.user;
+
+    await db.runAsync(
+      `INSERT OR REPLACE INTO users (uid, email, password, synced)
+       VALUES (?, ?, ?, 1);`,
+      [uid, email, password]
+    );
+
+    console.log("✅ Login online exitoso y sincronizado");
+    return { uid, email, online: true };
+  } else {
+    // OFFLINE → Validar local
+    const results = await db.getAllAsync("SELECT * FROM users WHERE email = ?;", [email]);
+    const user = results[0];
+
+    if (!user) throw new Error("Usuario no encontrado localmente");
+    if (user.password !== password) throw new Error("Contraseña incorrecta");
+
+    console.log("✅ Login offline exitoso (modo sin conexión)");
+    return { uid: user.uid, email: user.email, online: false };
+  }
 };
