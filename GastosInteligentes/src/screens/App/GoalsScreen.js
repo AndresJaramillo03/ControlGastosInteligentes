@@ -1,13 +1,15 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { View, Text, TextInput, Button, ActivityIndicator, Alert } from "react-native";
 import { useGoals } from "../../hooks/useGoals";
 import { useFocusEffect } from "@react-navigation/native";
+import { updateGoal } from "../../services/goalService";
 
 const GoalsScreen = () => {
     const { goals, loading, handleAddGoal, handleDeleteGoal, refreshGoals } = useGoals();
     const [name, setName] = useState("");
     const [target, setTarget] = useState("");
 
+    const activeGoal = goals?.[0];
 
     useFocusEffect(
         useCallback(() => {
@@ -15,30 +17,48 @@ const GoalsScreen = () => {
         }, [])
     );
 
-    const activeGoal = goals?.[0]; // solo 1 meta permitida
+    useEffect(() => {
+        if (activeGoal) {
+            setName(activeGoal.name);
+            setTarget(String(activeGoal.target));
+        } else {
+            setName("");
+            setTarget("");
+        }
+    }, [activeGoal]);
 
     const addGoal = async () => {
         if (!name || !target) {
-            Alert.alert("Campos incompletos", "Por favor completa todos los campos.");
+            Alert.alert("Campos incompletos", "Por favor completa todos los campos");
             return;
         }
 
         try {
-            await handleAddGoal({
-                name,
-                target: Number(target),
-                progress: 0,
-                reached: false,
-            });
+            if (activeGoal) {
+                // Editar meta activa
+                await updateGoal(activeGoal.id, {
+                    name,
+                    target: Number(target),
+                });
+            } else {
+                // Crear nueva meta
+                await handleAddGoal({
+                    name,
+                    target: Number(target),
+                    progress: 0,
+                    reached: false,
+                });
+            }
             setName("");
             setTarget("");
+            refreshGoals();
         } catch (error) {
-            console.error("Error al agregar meta:", error);
+            console.error("Error al guardar meta:", error);
             Alert.alert("Error", "No se pudo guardar la meta.");
         }
     };
 
-    const deleteGoal = async (id) => {
+    const deleteGoalHandler = async (id) => {
         Alert.alert("Eliminar meta", "¿Seguro que deseas eliminar esta meta?", [
             { text: "Cancelar", style: "cancel" },
             { text: "Eliminar", style: "destructive", onPress: () => handleDeleteGoal(id) },
@@ -54,53 +74,36 @@ const GoalsScreen = () => {
         );
     }
 
-    if (activeGoal) {
-        return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: 16,
-                }}
-            >
+    return (
+        <View style={{ flex: 1, padding: 16 }}>
+            {activeGoal && (
                 <View
                     style={{
                         backgroundColor: activeGoal.reached ? "#d4edda" : "#e8f2ff",
                         padding: 20,
                         borderRadius: 10,
-                        width: "90%",
-                        alignItems: "center",
+                        marginBottom: 20,
                     }}
                 >
                     <Text style={{ fontWeight: "bold", fontSize: 20, marginBottom: 8 }}>
-                        🎯 {activeGoal.name}
+                        🎯 Meta Activa
                     </Text>
-                    <Text style={{ fontSize: 16 }}>Meta: ${activeGoal.target}</Text>
-                    <Text style={{ fontSize: 16, marginBottom: 8 }}>
-                        Progreso: ${activeGoal.progress ?? 0}
-                    </Text>
+                    <Text style={{ fontSize: 16 }}>Progreso: ${activeGoal.progress ?? 0}</Text>
                     {activeGoal.reached && (
                         <Text style={{ color: "green", marginBottom: 10 }}>
                             ✅ ¡Meta alcanzada!
                         </Text>
                     )}
-                    <Button title="Eliminar meta" color="red" onPress={() => deleteGoal(activeGoal.id)} />
-
-                    {activeGoal.reached && (
-                        <View style={{ marginTop: 10, width: "100%" }}>
-                            <Button title="Crear nueva meta" onPress={() => handleDeleteGoal(activeGoal.id)} />
-                        </View>
-                    )}
+                    <Button
+                        title="Eliminar meta"
+                        color="red"
+                        onPress={() => deleteGoalHandler(activeGoal.id)}
+                    />
                 </View>
-            </View>
-        );
-    }
+            )}
 
-    return (
-        <View style={{ flex: 1, padding: 16 }}>
             <Text style={{ fontWeight: "bold", fontSize: 18, marginBottom: 12 }}>
-                Crear nueva meta de ahorro
+                {activeGoal ? "Editar meta" : "Crear nueva meta de ahorro"}
             </Text>
 
             <TextInput
@@ -130,7 +133,10 @@ const GoalsScreen = () => {
                 }}
             />
 
-            <Button title="Guardar meta" onPress={addGoal} />
+            <Button
+                title={activeGoal ? "Guardar cambios" : "Guardar meta"}
+                onPress={addGoal}
+            />
         </View>
     );
 };
