@@ -6,15 +6,13 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 
-/**
- * Registrar usuario (funciona online y offline)
- */
+
 export const registerUser = async (email, password) => {
   const netInfo = await NetInfo.fetch();
   const db = await getDB();
 
   if (netInfo.isConnected) {
-    // ONLINE → Firebase + guardar local
+  //Online entonces guardar en firebase y guardar local
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const { uid } = userCredential.user;
 
@@ -24,30 +22,28 @@ export const registerUser = async (email, password) => {
       [uid, email, password]
     );
 
-    console.log("✅ Usuario creado online y guardado localmente");
+    console.log("Usuario creado online y guardado localmente");
     return { uid, email, online: true };
   } else {
-    // OFFLINE → Guardar localmente
+     //offline Guardar localmente
     await db.runAsync(
       `INSERT INTO users (uid, email, password, synced)
        VALUES (?, ?, ?, 0);`,
       [null, email, password]
     );
 
-    console.log("✅ Usuario registrado offline (pendiente de sincronizar)");
+    console.log("Usuario registrado offline (pendiente de sincronizar)");
     return { email, uid: null, online: false };
   }
 };
 
-/**
- * Login usuario (funciona online y offline)
- */
+//Login usuario (funciona online y offline)
 export const loginUser = async (email, password) => {
   const netInfo = await NetInfo.fetch();
   const db = await getDB();
 
   if (netInfo.isConnected) {
-    // ONLINE → Firebase Auth
+    // online validar con Firebase Auth
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const { uid } = userCredential.user;
 
@@ -57,17 +53,17 @@ export const loginUser = async (email, password) => {
       [uid, email, password]
     );
 
-    console.log("✅ Login online exitoso y sincronizado");
+    console.log("Login online exitoso y sincronizado");
     return { uid, email, online: true };
   } else {
-    // OFFLINE → Validar local
+    //offline entonces Validar local
     const results = await db.getAllAsync("SELECT * FROM users WHERE email = ?;", [email]);
     const user = results[0];
 
     if (!user) throw new Error("Usuario no encontrado localmente");
     if (user.password !== password) throw new Error("Contraseña incorrecta");
 
-    console.log("✅ Login offline exitoso (modo sin conexión)");
+    console.log("Login offline exitoso");
     return { uid: user.uid, email: user.email, online: false };
   }
 };

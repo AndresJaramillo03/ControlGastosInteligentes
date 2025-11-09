@@ -1,12 +1,12 @@
 import * as SQLite from "expo-sqlite";
 
-// ✅ Crear (o abrir) la base de datos correctamente (modo async)
+// Crear o abrir la base de datos modo async
 let dbInstance = null;
 
 export const getDB = async () => {
   if (dbInstance) return dbInstance;
 
-  // Crear conexión con la base de datos
+  // Crear conexion con la base de datos
   dbInstance = await SQLite.openDatabaseAsync("users.db");
 
   // Crear la tabla si no existe
@@ -20,6 +20,6 @@ export const getDB = async () => {
     );
   `);
 
-  console.log("✅ Base de datos SQLite inicializada correctamente");
+  console.log("Base de datos SQLite inicializada correctamente");
   return dbInstance;
 };

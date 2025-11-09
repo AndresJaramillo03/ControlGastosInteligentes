@@ -20,11 +20,11 @@ function SyncHandler() {
 
   useEffect(() => {
     if (isConnected) {
-      console.log("📶 Conexión REAL detectada");
+      console.log("online activado");
       syncOfflineUsers();
       if (user?.uid) syncOfflineTransactions(user.uid);
     } else {
-      console.log("📴 Sin conexión (REAL)");
+      console.log("offline activado");
     }
   }, [isConnected, user]);
 
