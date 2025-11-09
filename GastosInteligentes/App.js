@@ -24,16 +24,16 @@ function SyncHandler() {
 
   useEffect(() => {
     if (isConnected) {
-      console.log("🌐 Online activado");
+      console.log("Online activado");
       syncOfflineUsers();
 
       if (user?.uid) {
-        // Sincronización general
+        // Sincronizacion general
         (async () => {
           await syncOfflineTransactions(user.uid);
           await syncOfflineGoals(user.uid);
 
-          // Verificar progreso de metas después de sincronizar
+          //Verificar progreso de metas después de sincronizar
           const [transactions, goals] = await Promise.all([
             getTransactionsByUser(user.uid),
             getGoalsByUser(user.uid),
@@ -43,7 +43,7 @@ function SyncHandler() {
         })();
       }
     } else {
-      console.log("📴 Offline activado");
+      console.log("Offline activado");
     }
   }, [isConnected, user]);
 
@@ -52,16 +52,15 @@ function SyncHandler() {
 
 export default function App() {
   useEffect(() => {
-    // 🔧 Inicializar base de datos local y permisos de notificación
     (async () => {
       await getDB();
 
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== "granted") {
-        console.log("⚠️ Permisos de notificación no concedidos");
+        console.log("No tienes permisos de notificaciones");
       }
 
-      // Configurar comportamiento de las notificaciones
+      //Configurar comportamiento de las notificaciones
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
