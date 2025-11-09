@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import ConnectionStatusBanner from "./src/components/ConnectionStatusBanner";
 import { syncOfflineTransactions } from "./src/services/transactionService";
 
-//componente para poder usar el useAuth() envolviendolo por el AuthProvider 
 function SyncHandler() {
   const { user } = useAuth();
 

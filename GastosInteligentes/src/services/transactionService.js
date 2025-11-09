@@ -1,9 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  doc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../config/firebase";
 import NetInfo from "@react-native-community/netinfo";
 
-// Guardar transacción (offline o online)
+//Agregar transaccion
 export const addTransaction = async (userId, transaction) => {
   try {
     const netInfo = await NetInfo.fetch();
@@ -15,9 +26,8 @@ export const addTransaction = async (userId, transaction) => {
     };
 
     if (!netInfo.isConnected) {
-      // Guardar localmente si no hay conexión
       const local = JSON.parse(await AsyncStorage.getItem("offline_transactions")) || [];
-      local.push(newTransaction);
+      local.push({ ...newTransaction, _action: "add" });
       await AsyncStorage.setItem("offline_transactions", JSON.stringify(local));
       console.log("Guardado localmente (sin conexión)");
       return "offline_saved";
@@ -32,26 +42,95 @@ export const addTransaction = async (userId, transaction) => {
   }
 };
 
-// Sincronizar cuando hay internet
-export const syncOfflineTransactions = async (userId) => {
-  const local = JSON.parse(await AsyncStorage.getItem("offline_transactions")) || [];
-  if (local.length === 0) return;
+//actualizar transaccuin
+export const updateTransaction = async (id, updatedData) => {
+  try {
+    const netInfo = await NetInfo.fetch();
 
-  console.log(`Sincronizando ${local.length} transacciones pendientes...`);
-
-  for (const t of local) {
-    await addDoc(collection(db, "transactions"), {
-      ...t,
-      userId,
-      syncedAt: serverTimestamp(),
-    });
+    if (!netInfo.isConnected) {
+      // Guardar la actualizacion para sincronizar luego
+      const local = JSON.parse(await AsyncStorage.getItem("offline_updates")) || [];
+      local.push({ id, updatedData, _action: "update" });
+      await AsyncStorage.setItem("offline_updates", JSON.stringify(local));
+      console.log("Actualización guardada localmente (sin conexión)");
+      return "offline_updated";
+    } else {
+      const docRef = doc(db, "transactions", id);
+      await updateDoc(docRef, { ...updatedData, updatedAt: serverTimestamp() });
+      console.log("Transacción actualizada online");
+      return "online_updated";
+    }
+  } catch (error) {
+    console.error("Error al actualizar transacción:", error);
+    throw error;
   }
-
-  await AsyncStorage.removeItem("offline_transactions");
-  console.log("Sincronización completada");
 };
 
-// Obtener transacciones online
+//Eliminar transaccion
+export const deleteTransaction = async (id) => {
+  try {
+    const netInfo = await NetInfo.fetch();
+
+    if (!netInfo.isConnected) {
+      // Guardar la eliminación para sincronizar luego
+      const local = JSON.parse(await AsyncStorage.getItem("offline_deletes")) || [];
+      local.push({ id, _action: "delete" });
+      await AsyncStorage.setItem("offline_deletes", JSON.stringify(local));
+      console.log("Eliminación guardada localmente (sin conexión)");
+      return "offline_deleted";
+    } else {
+      await deleteDoc(doc(db, "transactions", id));
+      console.log("Transacción eliminada online");
+      return "online_deleted";
+    }
+  } catch (error) {
+    console.error("Error al eliminar transacción:", error);
+    throw error;
+  }
+};
+
+//sincronizacion cuando haya internet
+export const syncOfflineTransactions = async (userId) => {
+  //sincronizar agregados
+  const localAdds = JSON.parse(await AsyncStorage.getItem("offline_transactions")) || [];
+  if (localAdds.length > 0) {
+    console.log(`Sincronizando ${localAdds.length} transacciones agregadas...`);
+    for (const t of localAdds) {
+      await addDoc(collection(db, "transactions"), {
+        ...t,
+        userId,
+        syncedAt: serverTimestamp(),
+      });
+    }
+    await AsyncStorage.removeItem("offline_transactions");
+    console.log("Sincronización de agregados completada");
+  }
+
+  //sincronizar actualizaciones
+  const localUpdates = JSON.parse(await AsyncStorage.getItem("offline_updates")) || [];
+  if (localUpdates.length > 0) {
+    console.log(`Sincronizando ${localUpdates.length} actualizaciones...`);
+    for (const u of localUpdates) {
+      const docRef = doc(db, "transactions", u.id);
+      await updateDoc(docRef, { ...u.updatedData, syncedAt: serverTimestamp() });
+    }
+    await AsyncStorage.removeItem("offline_updates");
+    console.log("Sincronización de actualizaciones completada");
+  }
+
+  //sincronizar eliminaciones
+  const localDeletes = JSON.parse(await AsyncStorage.getItem("offline_deletes")) || [];
+  if (localDeletes.length > 0) {
+    console.log(`Sincronizando ${localDeletes.length} eliminaciones...`);
+    for (const d of localDeletes) {
+      await deleteDoc(doc(db, "transactions", d.id));
+    }
+    await AsyncStorage.removeItem("offline_deletes");
+    console.log("Sincronización de eliminaciones completada");
+  }
+};
+
+//obtener transaciones
 export const getTransactionByUser = async (userId) => {
   try {
     const q = query(
@@ -60,7 +139,7 @@ export const getTransactionByUser = async (userId) => {
       orderBy("transactionDate", "desc")
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    return querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
