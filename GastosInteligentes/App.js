@@ -4,8 +4,12 @@ import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import ConnectionStatusBanner from "./src/components/ConnectionStatusBanner";
 import NetInfo from "@react-native-community/netinfo";
 import { syncOfflineTransactions } from "./src/services/transactionService";
-import { getDB } from "./src/services/database";
 import { syncOfflineUsers } from "./src/services/syncService";
+import { syncOfflineGoals, getGoalsByUser } from "./src/services/goalService";
+import { getDB } from "./src/services/database";
+import * as Notifications from "expo-notifications";
+import { checkGoalsProgress } from "./src/utils/checkGoals";
+import { getTransactionsByUser } from "./src/services/transactionService";
 
 function SyncHandler() {
   const { user } = useAuth();
@@ -20,11 +24,26 @@ function SyncHandler() {
 
   useEffect(() => {
     if (isConnected) {
-      console.log("online activado");
+      console.log("🌐 Online activado");
       syncOfflineUsers();
-      if (user?.uid) syncOfflineTransactions(user.uid);
+
+      if (user?.uid) {
+        // Sincronización general
+        (async () => {
+          await syncOfflineTransactions(user.uid);
+          await syncOfflineGoals(user.uid);
+
+          // Verificar progreso de metas después de sincronizar
+          const [transactions, goals] = await Promise.all([
+            getTransactionsByUser(user.uid),
+            getGoalsByUser(user.uid),
+          ]);
+
+          await checkGoalsProgress(transactions, goals);
+        })();
+      }
     } else {
-      console.log("offline activado");
+      console.log("📴 Offline activado");
     }
   }, [isConnected, user]);
 
@@ -33,8 +52,23 @@ function SyncHandler() {
 
 export default function App() {
   useEffect(() => {
+    // 🔧 Inicializar base de datos local y permisos de notificación
     (async () => {
       await getDB();
+
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        console.log("⚠️ Permisos de notificación no concedidos");
+      }
+
+      // Configurar comportamiento de las notificaciones
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
     })();
   }, []);
 
