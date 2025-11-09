@@ -71,20 +71,24 @@ export const deleteTransaction = async (id) => {
   try {
     const netInfo = await NetInfo.fetch();
 
+//Eliminar también del cache local
+    const cached = JSON.parse(await AsyncStorage.getItem("cached_transactions")) || [];
+    const updatedCache = cached.filter(t => t.id !== id);
+    await AsyncStorage.setItem("cached_transactions", JSON.stringify(updatedCache));
+
     if (!netInfo.isConnected) {
-      // Guardar la eliminación para sincronizar luego
       const local = JSON.parse(await AsyncStorage.getItem("offline_deletes")) || [];
       local.push({ id, _action: "delete" });
       await AsyncStorage.setItem("offline_deletes", JSON.stringify(local));
-      console.log("Eliminación guardada localmente (sin conexión)");
+      console.log("Eliminación guardada localmente (sin conexion)");
       return "offline_deleted";
     } else {
       await deleteDoc(doc(db, "transactions", id));
-      console.log("Transacción eliminada online");
+      console.log("Transaccion eliminada online");
       return "online_deleted";
     }
   } catch (error) {
-    console.error("Error al eliminar transacción:", error);
+    console.error("Error al eliminar transaccion:", error);
     throw error;
   }
 };
@@ -131,20 +135,65 @@ export const syncOfflineTransactions = async (userId) => {
 };
 
 //obtener transaciones
+
 export const getTransactionByUser = async (userId) => {
   try {
+    const netInfo = await NetInfo.fetch();
+
+//Siempre cargamos el cache local
+    const cached = JSON.parse(await AsyncStorage.getItem("cached_transactions")) || [];
+    const localAdds = JSON.parse(await AsyncStorage.getItem("offline_transactions")) || [];
+    const localUpdates = JSON.parse(await AsyncStorage.getItem("offline_updates")) || [];
+    const localDeletes = JSON.parse(await AsyncStorage.getItem("offline_deletes")) || [];
+
+    let merged = [...cached];
+
+ // Aplicar eliminaciones locales
+    for (const d of localDeletes) {
+      merged = merged.filter(t => t.id !== d.id);
+    }
+
+//Aplicar actualizaciones locales
+    for (const u of localUpdates) {
+      const idx = merged.findIndex(t => t.id === u.id);
+      if (idx >= 0) merged[idx] = { ...merged[idx], ...u.updatedData, offline: true };
+    }
+
+ //Agregar nuevas transacciones locales
+    for (const t of localAdds) {
+      merged.push({
+        ...t,
+        id: t.id || Math.random().toString(36).slice(2),
+        offline: true
+      });
+    }
+
+    if (!netInfo.isConnected) {
+      console.log("Mostrando datos locales (sin conexión)");
+      return merged.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+    }
+
+ //Si hay conexion hacemos get de Firebase
     const q = query(
       collection(db, "transactions"),
       where("userId", "==", userId),
       orderBy("transactionDate", "desc")
     );
+
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
+    const transactions = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
+
+//Guardar en cache
+    await AsyncStorage.setItem("cached_transactions", JSON.stringify(transactions));
+    console.log("Datos online obtenidos y guardados localmente");
+
+    return transactions;
   } catch (error) {
     console.error("Error al obtener transacciones:", error);
-    throw error;
+    const cached = JSON.parse(await AsyncStorage.getItem("cached_transactions")) || [];
+    return cached;
   }
 };
