@@ -5,7 +5,7 @@ import Chip from "../../components/Chip";
 import { useTransactionForm } from "../../hooks/useTransactionForm";
 import { useAuth } from "../../context/AuthContext";
 import { getGoalsByUser } from "../../services/goalService";
-import {checkGoalsProgress} from "../../utils/checkGoals"
+import { checkGoalsProgress } from "../../utils/checkGoals"
 import { getTransactionByUser } from "../../services/transactionService";
 
 const toYMD = (d) => {
@@ -52,12 +52,10 @@ const TransactionFormScreen = ({ route, navigation }) => {
 
   const handleSave = async () => {
     try {
-      await onSubmit();
-
-      // Luego de guardar la transacción, revisamos metas 🎯
+      const savedTransaction = await onSubmit();
       const goals = await getGoalsByUser(user.uid);
-      const transactions = await getTransactionByUser(user.uid);
-      await checkGoalsProgress(transactions, goals);
+      const allTransactions = await getTransactionByUser(user.uid);
+      await checkGoalsProgress(allTransactions, goals);
 
       Alert.alert("Éxito", "Transacción guardada correctamente.");
     } catch (error) {
