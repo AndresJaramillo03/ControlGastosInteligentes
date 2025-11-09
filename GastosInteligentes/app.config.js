@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "GastosPersonales",
+    name: "projectGastosPersonales",
     slug: "gastospersonales",
     version: "1.0.0",
     orientation: "portrait",
@@ -18,7 +18,7 @@ export default {
       supportsTablet: true,
     },
     android: {
-      "package": "com.gastospersonales.grupo4",
+      "package": "com.gastospersonales.io",
       "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       adaptiveIcon: {
@@ -30,10 +30,10 @@ export default {
     web: {
       favicon: "./assets/favicon.png",
     },
-     extra: {
+    extra: {
       eas: {
         projectId: "37dd0b69-5173-42ce-92cc-d6dc7b3fb369"
       }
-    }
+    },
   },
 };
